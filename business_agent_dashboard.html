@@ -1,0 +1,567 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans, 'Segoe UI', sans-serif); background: transparent; color: var(--color-text-primary); font-size: 14px; }
+
+  .nav { display: flex; gap: 4px; padding: 0 0 16px; border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 16px; flex-wrap: wrap; }
+  .nav button { padding: 6px 14px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: transparent; color: var(--color-text-secondary); font-size: 12px; cursor: pointer; transition: all .15s; }
+  .nav button.active, .nav button:hover { background: var(--color-background-secondary); color: var(--color-text-primary); border-color: var(--color-border-primary); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+  .card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 16px; }
+  .card h3 { font-size: 12px; color: var(--color-text-secondary); font-weight: 400; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .04em; }
+  .card .val { font-size: 24px; font-weight: 500; color: var(--color-text-primary); }
+  .card .sub { font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; }
+
+  .wide-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 20px; margin-bottom: 12px; }
+  .wide-card h2 { font-size: 15px; font-weight: 500; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: var(--border-radius-md); font-size: 11px; font-weight: 500; }
+  .badge.green { background: #EAF3DE; color: #3B6D11; }
+  .badge.blue { background: #E6F1FB; color: #185FA5; }
+  .badge.amber { background: #FAEEDA; color: #854F0B; }
+  .badge.red { background: #FCEBEB; color: #A32D2D; }
+  .badge.purple { background: #EEEDFE; color: #534AB7; }
+  .badge.teal { background: #E1F5EE; color: #0F6E56; }
+
+  /* Agent nodes */
+  .agent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+  .agent-node { border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-lg); padding: 14px; cursor: pointer; transition: all .15s; position: relative; }
+  .agent-node:hover { background: var(--color-background-secondary); transform: translateY(-1px); }
+  .agent-node .icon { font-size: 20px; margin-bottom: 8px; }
+  .agent-node .name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .agent-node .desc { font-size: 11px; color: var(--color-text-secondary); line-height: 1.4; }
+  .agent-node .status-dot { width: 7px; height: 7px; border-radius: 50%; position: absolute; top: 12px; right: 12px; }
+  .dot-green { background: #63B322; }
+  .dot-amber { background: #EF9F27; }
+  .dot-gray { background: #888780; }
+
+  /* Workflow steps */
+  .wf-step { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .wf-step:last-child { border-bottom: none; }
+  .wf-num { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; flex-shrink: 0; }
+  .wf-num.done { background: #EAF3DE; color: #3B6D11; }
+  .wf-num.active { background: #E6F1FB; color: #185FA5; }
+  .wf-num.todo { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .wf-body .title { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+  .wf-body .detail { font-size: 11px; color: var(--color-text-secondary); line-height: 1.5; }
+
+  /* Code block */
+  .code-block { background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 14px 16px; font-family: var(--font-mono, monospace); font-size: 12px; color: var(--color-text-primary); line-height: 1.7; margin-bottom: 10px; overflow-x: auto; }
+  .code-block .kw { color: #534AB7; }
+  .code-block .str { color: #0F6E56; }
+  .code-block .cm { color: #888780; }
+  .code-block .fn { color: #185FA5; }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { text-align: left; padding: 8px 10px; border-bottom: 0.5px solid var(--color-border-secondary); color: var(--color-text-secondary); font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .data-table td { padding: 8px 10px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--color-background-secondary); }
+
+  /* KPI bar */
+  .kpi-bar { height: 6px; border-radius: 3px; background: var(--color-background-secondary); overflow: hidden; margin-top: 8px; }
+  .kpi-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 20px; }
+  .timeline::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 0.5px; background: var(--color-border-secondary); }
+  .tl-item { position: relative; margin-bottom: 14px; }
+  .tl-dot { width: 8px; height: 8px; border-radius: 50%; position: absolute; left: -17px; top: 5px; }
+  .tl-title { font-size: 12px; font-weight: 500; }
+  .tl-sub { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+
+  /* Content calendar */
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 8px; }
+  .cal-day-name { font-size: 10px; color: var(--color-text-secondary); text-align: center; padding: 4px 0; }
+  .cal-cell { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 6px; min-height: 52px; font-size: 10px; cursor: pointer; transition: background .12s; }
+  .cal-cell:hover { background: var(--color-background-secondary); }
+  .cal-cell .day-num { font-size: 11px; font-weight: 500; margin-bottom: 3px; }
+  .cal-post { padding: 1px 4px; border-radius: 2px; margin-bottom: 2px; font-size: 9px; }
+  .cal-ig { background: #FAEEDA; color: #854F0B; }
+  .cal-tw { background: #E6F1FB; color: #185FA5; }
+  .cal-li { background: #E1F5EE; color: #0F6E56; }
+  .cal-yt { background: #FCEBEB; color: #A32D2D; }
+
+  /* Principle pillars */
+  .pillar { border-left: 3px solid; padding: 10px 12px; margin-bottom: 8px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; }
+  .p-blue { border-color: #378ADD; background: #E6F1FB20; }
+  .p-teal { border-color: #1D9E75; background: #E1F5EE20; }
+  .p-purple { border-color: #7F77DD; background: #EEEDFE20; }
+  .p-amber { border-color: #EF9F27; background: #FAEEDA20; }
+  .p-coral { border-color: #D85A30; background: #FAECE720; }
+  .pillar .ptitle { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+  .pillar .pdesc { font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; }
+
+  /* n8n node style */
+  .n8n-flow { display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 8px 0; }
+  .n8n-node { display: flex; flex-direction: column; align-items: center; min-width: 80px; }
+  .n8n-box { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1.5px solid; }
+  .n8n-label { font-size: 10px; color: var(--color-text-secondary); margin-top: 5px; text-align: center; max-width: 72px; }
+  .n8n-arrow { width: 28px; height: 2px; background: var(--color-border-secondary); position: relative; flex-shrink: 0; }
+  .n8n-arrow::after { content: '›'; position: absolute; right: -5px; top: -8px; color: var(--color-text-secondary); font-size: 16px; }
+
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-secondary); margin: 0 0 10px; font-weight: 400; }
+</style>
+</head>
+<body>
+
+<div style="padding: 0 0 4px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div>
+      <div style="font-size:18px;font-weight:500;">Business Intelligence Hub</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Agent-powered · n8n workflows · Python localhost</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <span class="badge green">● Live</span>
+      <span class="badge blue">n8n :5678</span>
+      <span class="badge purple">Python :8000</span>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="active" onclick="showTab('overview')"><i class="ti ti-dashboard" aria-hidden="true"></i> Overview</button>
+    <button onclick="showTab('agents')"><i class="ti ti-robot" aria-hidden="true"></i> Agent Architecture</button>
+    <button onclick="showTab('n8n')"><i class="ti ti-bolt" aria-hidden="true"></i> n8n Workflows</button>
+    <button onclick="showTab('content')"><i class="ti ti-calendar" aria-hidden="true"></i> Content & Social</button>
+    <button onclick="showTab('ict')"><i class="ti ti-server" aria-hidden="true"></i> ICT Principles</button>
+    <button onclick="showTab('marketing')"><i class="ti ti-chart-bar" aria-hidden="true"></i> Digital Marketing</button>
+    <button onclick="showTab('setup')"><i class="ti ti-terminal" aria-hidden="true"></i> Setup Guide</button>
+  </nav>
+
+  <!-- OVERVIEW -->
+  <div id="panel-overview" class="panel active">
+    <div class="grid4">
+      <div class="card"><h3>Active Agents</h3><div class="val">7</div><div class="sub">3 running now</div><div class="kpi-bar"><div class="kpi-fill" style="width:43%;background:#378ADD;"></div></div></div>
+      <div class="card"><h3>n8n Workflows</h3><div class="val">12</div><div class="sub">9 enabled</div><div class="kpi-bar"><div class="kpi-fill" style="width:75%;background:#1D9E75;"></div></div></div>
+      <div class="card"><h3>Content Queued</h3><div class="val">28</div><div class="sub">4 platforms</div><div class="kpi-bar"><div class="kpi-fill" style="width:60%;background:#EF9F27;"></div></div></div>
+      <div class="card"><h3>Conversions</h3><div class="val">4.2%</div><div class="sub">+0.8% this week</div><div class="kpi-bar"><div class="kpi-fill" style="width:42%;background:#7F77DD;"></div></div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="wide-card">
+        <h2><i class="ti ti-activity" aria-hidden="true"></i> Recent Activity</h2>
+        <div class="timeline">
+          <div class="tl-item"><div class="tl-dot" style="background:#63B322;"></div><div class="tl-title">Content Agent published 3 posts</div><div class="tl-sub">Instagram, LinkedIn, Twitter · 14 min ago</div></div>
+          <div class="tl-item"><div class="tl-dot" style="background:#378ADD;"></div><div class="tl-title">CRM Agent synced 47 leads</div><div class="tl-sub">HubSpot → Google Sheets via n8n · 1 hr ago</div></div>
+          <div class="tl-item"><div class="tl-dot" style="background:#EF9F27;"></div><div class="tl-title">Analytics Agent flagged anomaly</div><div class="tl-sub">Bounce rate +12% on landing page · 2 hr ago</div></div>
+          <div class="tl-item"><div class="tl-dot" style="background:#7F77DD;"></div><div class="tl-title">SEO Agent completed audit</div><div class="tl-sub">38 recommendations generated · 5 hr ago</div></div>
+          <div class="tl-item"><div class="tl-dot" style="background:#1D9E75;"></div><div class="tl-title">Email Agent sent campaign</div><div class="tl-sub">2,400 recipients · 34% open rate · 8 hr ago</div></div>
+        </div>
+      </div>
+
+      <div class="wide-card">
+        <h2><i class="ti ti-sitemap" aria-hidden="true"></i> Business Structure</h2>
+        <table class="data-table">
+          <thead><tr><th>Department</th><th>Agent</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Marketing</td><td>Content + SEO</td><td><span class="badge green">Active</span></td></tr>
+            <tr><td>Sales</td><td>CRM + Lead Gen</td><td><span class="badge green">Active</span></td></tr>
+            <tr><td>IT / Ops</td><td>DevOps + Monitor</td><td><span class="badge blue">Standby</span></td></tr>
+            <tr><td>Finance</td><td>Report Agent</td><td><span class="badge amber">Scheduled</span></td></tr>
+            <tr><td>Customer Svc</td><td>Support Bot</td><td><span class="badge green">Active</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENTS -->
+  <div id="panel-agents" class="panel">
+    <p class="section-title">Agent Roster — click any node to learn more</p>
+    <div class="agent-grid">
+      <div class="agent-node" onclick="sendPrompt('Explain the Content Creation Agent architecture in detail')">
+        <div class="status-dot dot-green"></div>
+        <div class="icon">✍️</div>
+        <div class="name">Content Agent</div>
+        <div class="desc">Drafts posts, captions & blogs using Claude API. Feeds into social scheduler.</div>
+      </div>
+      <div class="agent-node" onclick="sendPrompt('How does the SEO Agent work with Python and n8n?')">
+        <div class="status-dot dot-green"></div>
+        <div class="icon">🔍</div>
+        <div class="name">SEO Agent</div>
+        <div class="desc">Crawls site, scores pages, generates keyword clusters. Outputs to Google Sheets.</div>
+      </div>
+      <div class="agent-node" onclick="sendPrompt('Explain the CRM Lead Agent workflow')">
+        <div class="status-dot dot-green"></div>
+        <div class="icon">🎯</div>
+        <div class="name">Lead Gen Agent</div>
+        <div class="desc">Qualifies inbound leads, scores them, routes to CRM via n8n HTTP node.</div>
+      </div>
+      <div class="agent-node" onclick="sendPrompt('How does the Analytics Agent detect anomalies?')">
+        <div class="status-dot dot-amber"></div>
+        <div class="icon">📊</div>
+        <div class="name">Analytics Agent</div>
+        <div class="desc">Reads GA4 + Meta Ads. Detects anomalies, sends Slack alerts via n8n.</div>
+      </div>
+      <div class="agent-node" onclick="sendPrompt('How does the Email Campaign Agent work?')">
+        <div class="status-dot dot-green"></div>
+        <div class="icon">📧</div>
+        <div class="name">Email Agent</div>
+        <div class="desc">Personalises campaigns, schedules sends, tracks opens/clicks. Brevo / Mailchimp.</div>
+      </div>
+      <div class="agent-node" onclick="sendPrompt('What does the Support Bot Agent do?')">
+        <div class="status-dot dot-green"></div>
+        <div class="icon">💬</div>
+        <div class="name">Support Agent</div>
+        <div class="desc">Handles FAQ, escalates to human. Trained on KB. Deployed via WhatsApp + web.</div>
+      </div>
+      <div class="agent-node" onclick="sendPrompt('How does the DevOps Monitor Agent integrate with ICT?')">
+        <div class="status-dot dot-gray"></div>
+        <div class="icon">🖥️</div>
+        <div class="name">DevOps Agent</div>
+        <div class="desc">Monitors uptime, CPU/RAM, triggers n8n alert workflow on threshold breach.</div>
+      </div>
+      <div class="agent-node" onclick="sendPrompt('How does the Finance Report Agent work?')">
+        <div class="status-dot dot-amber"></div>
+        <div class="icon">💰</div>
+        <div class="name">Finance Agent</div>
+        <div class="desc">Pulls Mpesa, bank & Quickbooks data. Auto-generates PDF reports weekly.</div>
+      </div>
+      <div class="agent-node" onclick="sendPrompt('What is the Orchestrator Agent and how does it manage other agents?')">
+        <div class="status-dot dot-green"></div>
+        <div class="icon">🧠</div>
+        <div class="name">Orchestrator</div>
+        <div class="desc">Master coordinator. Routes tasks, manages state, resolves conflicts between agents.</div>
+      </div>
+    </div>
+
+    <div class="wide-card">
+      <h2><i class="ti ti-arrows-exchange" aria-hidden="true"></i> Agent Communication Pattern</h2>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px;">Each agent exposes a REST endpoint on Python localhost. n8n calls them via HTTP Request nodes.</div>
+      <div class="code-block"><span class="cm"># Agent base class (Python FastAPI)</span>
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">from</span> anthropic <span class="kw">import</span> Anthropic
+
+app = <span class="fn">FastAPI</span>()
+client = <span class="fn">Anthropic</span>()
+
+<span class="cm"># Each agent is a POST endpoint</span>
+@app.<span class="fn">post</span>(<span class="str">"/agents/content"</span>)
+<span class="kw">async def</span> <span class="fn">content_agent</span>(task: dict):
+    response = client.messages.<span class="fn">create</span>(
+        model=<span class="str">"claude-sonnet-4-20250514"</span>,
+        max_tokens=<span class="str">1024</span>,
+        system=<span class="str">"You are a content creation agent..."</span>,
+        messages=[{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: task[<span class="str">"prompt"</span>]}]
+    )
+    <span class="kw">return</span> {<span class="str">"result"</span>: response.content[<span class="str">0</span>].text}</div>
+    </div>
+  </div>
+
+  <!-- N8N -->
+  <div id="panel-n8n" class="panel">
+    <p class="section-title">n8n Workflow Examples — localhost:5678</p>
+
+    <div class="wide-card">
+      <h2>📤 Content Publishing Workflow</h2>
+      <div class="n8n-flow">
+        <div class="n8n-node"><div class="n8n-box" style="background:#FAEEDA;border-color:#EF9F27;">⏱️</div><div class="n8n-label">Schedule Trigger</div></div>
+        <div class="n8n-arrow"></div>
+        <div class="n8n-node"><div class="n8n-box" style="background:#E6F1FB;border-color:#378ADD;">🤖</div><div class="n8n-label">HTTP → Content Agent</div></div>
+        <div class="n8n-arrow"></div>
+        <div class="n8n-node"><div class="n8n-box" style="background:#EEEDFE;border-color:#7F77DD;">⚡</div><div class="n8n-label">Code Node (format)</div></div>
+        <div class="n8n-arrow"></div>
+        <div class="n8n-node"><div class="n8n-box" style="background:#E1F5EE;border-color:#1D9E75;">📸</div><div class="n8n-label">Instagram API</div></div>
+        <div class="n8n-arrow"></div>
+        <div class="n8n-node"><div class="n8n-box" style="background:#E6F1FB;border-color:#185FA5;">🐦</div><div class="n8n-label">Twitter / X</div></div>
+        <div class="n8n-arrow"></div>
+        <div class="n8n-node"><div class="n8n-box" style="background:#EAF3DE;border-color:#3B6D11;">💼</div><div class="n8n-label">LinkedIn</div></div>
+        <div class="n8n-arrow"></div>
+        <div class="n8n-node"><div class="n8n-box" style="background:#FAECE7;border-color:#D85A30;">📊</div><div class="n8n-label">Log to Sheets</div></div>
+      </div>
+    </div>
+
+    <div class="wide-card">
+      <h2>🎯 Lead Qualification Workflow</h2>
+      <div class="n8n-flow">
+        <div class="n8n-node"><div class="n8n-box" style="background:#E1F5EE;border-color:#1D9E75;">📥</div><div class="n8n-label">Webhook (form)</div></div>
+        <div class="n8n-arrow"></div>
+        <div class="n8n-node"><div class="n8n-box" style="background:#E6F1FB;border-color:#378ADD;">🤖</div><div class="n8n-label">Lead Gen Agent</div></div>
+        <div class="n8n-arrow"></div>
+        <div class="n8n-node"><div class="n8n-box" style="background:#FAEEDA;border-color:#EF9F27;">🔀</div><div class="n8n-label">IF (score &gt; 70)</div></div>
+        <div class="n8n-arrow"></div>
+        <div class="n8n-node"><div class="n8n-box" style="background:#EEEDFE;border-color:#7F77DD;">📞</div><div class="n8n-label">CRM (HubSpot)</div></div>
+        <div class="n8n-arrow"></div>
+        <div class="n8n-node"><div class="n8n-box" style="background:#FCEBEB;border-color:#E24B4A;">💬</div><div class="n8n-label">Slack Alert</div></div>
+      </div>
+    </div>
+
+    <div class="wide-card">
+      <h2><i class="ti ti-list" aria-hidden="true"></i> All Workflows</h2>
+      <table class="data-table">
+        <thead><tr><th>Workflow</th><th>Trigger</th><th>Integrations</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Content Publisher</td><td>Daily 9am</td><td>Claude, IG, TW, LI</td><td><span class="badge green">On</span></td></tr>
+          <tr><td>Lead Qualifier</td><td>Webhook</td><td>Claude, HubSpot, Slack</td><td><span class="badge green">On</span></td></tr>
+          <tr><td>Analytics Alert</td><td>Every 4hr</td><td>GA4, Claude, Slack</td><td><span class="badge green">On</span></td></tr>
+          <tr><td>Email Campaign</td><td>Tuesday 7am</td><td>Mailchimp, Claude, Sheets</td><td><span class="badge amber">Paused</span></td></tr>
+          <tr><td>SEO Audit</td><td>Weekly Mon</td><td>Screaming Frog, Claude</td><td><span class="badge green">On</span></td></tr>
+          <tr><td>Finance Report</td><td>1st of month</td><td>Quickbooks, Claude, PDF</td><td><span class="badge blue">Scheduled</span></td></tr>
+          <tr><td>Support Escalation</td><td>Webhook</td><td>WhatsApp, Claude, Slack</td><td><span class="badge green">On</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="panel-content" class="panel">
+    <p class="section-title">Content Calendar — May 2026</p>
+    <div class="cal-grid">
+      <div class="cal-day-name">Mon</div><div class="cal-day-name">Tue</div><div class="cal-day-name">Wed</div><div class="cal-day-name">Thu</div><div class="cal-day-name">Fri</div><div class="cal-day-name">Sat</div><div class="cal-day-name">Sun</div>
+    </div>
+    <div id="cal-body" class="cal-grid"></div>
+
+    <div class="grid2" style="margin-top:12px;">
+      <div class="wide-card">
+        <h2><i class="ti ti-chart-pie" aria-hidden="true"></i> Platform Mix</h2>
+        <table class="data-table">
+          <thead><tr><th>Platform</th><th>Posts/Wk</th><th>Best Time</th><th>Format</th></tr></thead>
+          <tbody>
+            <tr><td>Instagram</td><td>5</td><td>9am, 6pm</td><td>Reel + Carousel</td></tr>
+            <tr><td>LinkedIn</td><td>3</td><td>Tue–Thu 8am</td><td>Long-form + Poll</td></tr>
+            <tr><td>Twitter/X</td><td>7</td><td>12pm, 5pm</td><td>Thread + Reply</td></tr>
+            <tr><td>YouTube</td><td>1</td><td>Friday 3pm</td><td>Short + Long</td></tr>
+            <tr><td>TikTok</td><td>4</td><td>7pm–9pm</td><td>Short video</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="wide-card">
+        <h2><i class="ti ti-pencil" aria-hidden="true"></i> Content Pillars</h2>
+        <div class="pillar p-blue"><div class="ptitle">Education (40%)</div><div class="pdesc">How-to guides, explainers, tutorials. Builds authority and trust.</div></div>
+        <div class="pillar p-teal"><div class="ptitle">Inspiration (25%)</div><div class="pdesc">Success stories, quotes, behind-the-scenes. Drives shares and saves.</div></div>
+        <div class="pillar p-amber"><div class="ptitle">Promotion (15%)</div><div class="pdesc">Products, offers, CTAs. Direct conversion content.</div></div>
+        <div class="pillar p-purple"><div class="ptitle">Community (20%)</div><div class="pdesc">Questions, polls, UGC, replies. Builds engagement and loyalty.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ICT -->
+  <div id="panel-ict" class="panel">
+    <p class="section-title">ICT Principles for Business</p>
+    <div class="grid2">
+      <div>
+        <div class="pillar p-blue"><div class="ptitle">Security by Design</div><div class="pdesc">Encrypt data in transit (HTTPS/TLS) and at rest. Use .env files for API keys. Never hardcode secrets. Run agents with least-privilege service accounts.</div></div>
+        <div class="pillar p-teal"><div class="ptitle">Scalability</div><div class="pdesc">Design agents as stateless microservices. Use queues (Redis, RabbitMQ) to decouple. n8n handles orchestration so Python agents stay lean.</div></div>
+        <div class="pillar p-purple"><div class="ptitle">Data Management</div><div class="pdesc">Single source of truth — Google Sheets or Supabase. Agents read/write via API. Maintain audit logs for every automated action.</div></div>
+        <div class="pillar p-amber"><div class="ptitle">Reliability / Uptime</div><div class="pdesc">Use systemd or PM2 to keep Python agents alive. n8n's built-in retry logic handles transient failures. Monitor with UptimeRobot.</div></div>
+        <div class="pillar p-coral"><div class="ptitle">Interoperability</div><div class="pdesc">REST + JSON as the contract between all components. n8n's 400+ integrations make connecting new tools a config change, not code.</div></div>
+      </div>
+      <div>
+        <div class="wide-card" style="margin-bottom:12px;">
+          <h2><i class="ti ti-server" aria-hidden="true"></i> Local Stack</h2>
+          <table class="data-table">
+            <thead><tr><th>Service</th><th>Port</th><th>Role</th></tr></thead>
+            <tbody>
+              <tr><td>Python (FastAPI)</td><td>:8000</td><td>Agent endpoints</td></tr>
+              <tr><td>n8n</td><td>:5678</td><td>Workflow orchestration</td></tr>
+              <tr><td>Redis</td><td>:6379</td><td>Queue / cache</td></tr>
+              <tr><td>Supabase / PG</td><td>:5432</td><td>Data persistence</td></tr>
+              <tr><td>Nginx (opt)</td><td>:80/443</td><td>Reverse proxy</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="wide-card">
+          <h2><i class="ti ti-shield" aria-hidden="true"></i> Security Checklist</h2>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" checked> API keys in <code>.env</code>, never in code</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" checked> n8n credentials vault enabled</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> HTTPS on all public endpoints</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" checked> Agent rate limiting (slowapi)</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> Supabase Row Level Security on</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> Audit log table in DB</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> n8n basic auth enabled</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MARKETING -->
+  <div id="panel-marketing" class="panel">
+    <p class="section-title">Digital Marketing Principles</p>
+    <div class="grid3" style="margin-bottom:12px;">
+      <div class="card"><h3>Email Open Rate</h3><div class="val">34.2%</div><div class="sub">Industry avg 21%</div><div class="kpi-bar"><div class="kpi-fill" style="width:68%;background:#1D9E75;"></div></div></div>
+      <div class="card"><h3>SEO Score</h3><div class="val">74/100</div><div class="sub">↑ 6 pts this month</div><div class="kpi-bar"><div class="kpi-fill" style="width:74%;background:#7F77DD;"></div></div></div>
+      <div class="card"><h3>ROAS</h3><div class="val">3.8×</div><div class="sub">Google Ads</div><div class="kpi-bar"><div class="kpi-fill" style="width:76%;background:#EF9F27;"></div></div></div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <div class="pillar p-blue"><div class="ptitle">SEO — Search Intent First</div><div class="pdesc">The SEO Agent clusters keywords by intent (informational, commercial, transactional). Content Agent writes to match intent, not just keyword density.</div></div>
+        <div class="pillar p-teal"><div class="ptitle">Email — Segment & Personalise</div><div class="pdesc">Email Agent segments by behaviour (opened, clicked, purchased). Claude generates personalised subject lines per segment, lifting open rates 30–40%.</div></div>
+        <div class="pillar p-purple"><div class="ptitle">Paid Ads — ROAS Loop</div><div class="pdesc">Analytics Agent monitors ROAS hourly. If below threshold, n8n triggers pause workflow and Slack alert. Reduces ad spend waste automatically.</div></div>
+        <div class="pillar p-amber"><div class="ptitle">Conversion Rate Optimisation</div><div class="pdesc">Analytics Agent A/B tests CTAs. Winning variant is auto-promoted. Claude writes variant copy. Results logged to Sheets for reporting.</div></div>
+        <div class="pillar p-coral"><div class="ptitle">Customer Journey Mapping</div><div class="pdesc">Awareness → Interest → Consideration → Intent → Purchase → Loyalty. Each stage has a dedicated agent action and n8n workflow trigger.</div></div>
+      </div>
+      <div class="wide-card">
+        <h2><i class="ti ti-funnel" aria-hidden="true"></i> Marketing Funnel Metrics</h2>
+        <table class="data-table">
+          <thead><tr><th>Stage</th><th>Volume</th><th>Rate</th><th>Agent</th></tr></thead>
+          <tbody>
+            <tr><td>Impressions</td><td>48,200</td><td>—</td><td>Ads Agent</td></tr>
+            <tr><td>Clicks</td><td>2,890</td><td>6.0% CTR</td><td>Analytics</td></tr>
+            <tr><td>Leads</td><td>412</td><td>14.3%</td><td>Lead Gen</td></tr>
+            <tr><td>MQL</td><td>184</td><td>44.7%</td><td>CRM Agent</td></tr>
+            <tr><td>SQL</td><td>67</td><td>36.4%</td><td>CRM Agent</td></tr>
+            <tr><td>Customers</td><td>29</td><td>43.3%</td><td>Email Agent</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:14px;">
+          <div class="section-title">CAC vs LTV</div>
+          <div style="display:flex;gap:16px;">
+            <div class="card" style="flex:1;padding:10px;"><h3>CAC</h3><div class="val" style="font-size:18px;">KES 4,200</div></div>
+            <div class="card" style="flex:1;padding:10px;"><h3>LTV</h3><div class="val" style="font-size:18px;">KES 18,600</div></div>
+            <div class="card" style="flex:1;padding:10px;"><h3>Ratio</h3><div class="val" style="font-size:18px;color:#63B322;">4.4×</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <div id="panel-setup" class="panel">
+    <p class="section-title">Setup Guide — Python + n8n Localhost</p>
+
+    <div class="wide-card">
+      <h2>Step 1 — Install & run n8n</h2>
+      <div class="wf-step"><div class="wf-num done">1</div><div class="wf-body"><div class="title">Install n8n globally</div><div class="detail">
+        <div class="code-block"><span class="fn">npm</span> install -g n8n</div>
+      </div></div></div>
+      <div class="wf-step"><div class="wf-num done">2</div><div class="wf-body"><div class="title">Start n8n</div><div class="detail">
+        <div class="code-block">n8n start
+<span class="cm"># Open http://localhost:5678</span></div>
+      </div></div></div>
+    </div>
+
+    <div class="wide-card">
+      <h2>Step 2 — Python Agent Server</h2>
+      <div class="code-block"><span class="cm"># Install dependencies</span>
+pip install fastapi uvicorn anthropic python-dotenv
+
+<span class="cm"># .env file</span>
+ANTHROPIC_API_KEY=<span class="str">sk-ant-...</span>
+
+<span class="cm"># main.py</span>
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">from</span> anthropic <span class="kw">import</span> Anthropic
+<span class="kw">from</span> dotenv <span class="kw">import</span> load_dotenv
+<span class="kw">import</span> os
+
+<span class="fn">load_dotenv</span>()
+app = <span class="fn">FastAPI</span>(title=<span class="str">"Business Agent API"</span>)
+client = <span class="fn">Anthropic</span>(api_key=os.<span class="fn">getenv</span>(<span class="str">"ANTHROPIC_API_KEY"</span>))
+
+@app.<span class="fn">post</span>(<span class="str">"/agents/{agent_name}"</span>)
+<span class="kw">async def</span> <span class="fn">run_agent</span>(agent_name: str, body: dict):
+    system_prompts = {
+        <span class="str">"content"</span>: <span class="str">"You are an expert content creator for social media..."</span>,
+        <span class="str">"seo"</span>:     <span class="str">"You are an SEO specialist. Analyse and recommend..."</span>,
+        <span class="str">"leads"</span>:  <span class="str">"You are a B2B lead qualification expert..."</span>,
+    }
+    result = client.messages.<span class="fn">create</span>(
+        model=<span class="str">"claude-sonnet-4-20250514"</span>,
+        max_tokens=<span class="str">1024</span>,
+        system=system_prompts.<span class="fn">get</span>(agent_name, <span class="str">"You are a helpful business agent."</span>),
+        messages=[{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: body[<span class="str">"prompt"</span>]}]
+    )
+    <span class="kw">return</span> {<span class="str">"agent"</span>: agent_name, <span class="str">"result"</span>: result.content[<span class="str">0</span>].text}
+
+<span class="cm"># Run: uvicorn main:app --reload --port 8000</span></div>
+    </div>
+
+    <div class="wide-card">
+      <h2>Step 3 — Connect n8n → Python Agent</h2>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px;">In n8n, add an <strong>HTTP Request</strong> node with these settings:</div>
+      <table class="data-table">
+        <thead><tr><th>Field</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Method</td><td>POST</td></tr>
+          <tr><td>URL</td><td><code>http://localhost:8000/agents/content</code></td></tr>
+          <tr><td>Body Type</td><td>JSON</td></tr>
+          <tr><td>Body</td><td><code>{"prompt": "{{ $json.topic }}"}</code></td></tr>
+          <tr><td>Response</td><td>JSON → use <code>{{ $json.result }}</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="wide-card">
+      <h2>Step 4 — Run as a service (PM2)</h2>
+      <div class="code-block"><span class="fn">npm</span> install -g pm2
+
+<span class="cm"># Start Python agent</span>
+pm2 start <span class="str">"uvicorn main:app --port 8000"</span> --name agents
+
+<span class="cm"># Start n8n</span>
+pm2 start <span class="str">"n8n start"</span> --name n8n
+
+pm2 save && pm2 startup</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Build content calendar
+(function() {
+  const posts = {
+    1:[{t:'IG',c:'cal-ig'}],
+    2:[{t:'LI',c:'cal-li'},{t:'TW',c:'cal-tw'}],
+    5:[{t:'IG',c:'cal-ig'},{t:'TW',c:'cal-tw'}],
+    6:[{t:'YT',c:'cal-yt'}],
+    7:[{t:'IG',c:'cal-ig'},{t:'LI',c:'cal-li'}],
+    8:[{t:'TW',c:'cal-tw'}],
+    9:[{t:'IG',c:'cal-ig'}],
+    12:[{t:'LI',c:'cal-li'},{t:'TW',c:'cal-tw'},{t:'IG',c:'cal-ig'}],
+    13:[{t:'IG',c:'cal-ig'}],
+    14:[{t:'TW',c:'cal-tw'}],
+    15:[{t:'YT',c:'cal-yt'},{t:'IG',c:'cal-ig'}],
+    16:[{t:'LI',c:'cal-li'}],
+    19:[{t:'IG',c:'cal-ig'},{t:'TW',c:'cal-tw'}],
+    20:[{t:'LI',c:'cal-li'}],
+    21:[{t:'IG',c:'cal-ig'}],
+    22:[{t:'TW',c:'cal-tw'},{t:'YT',c:'cal-yt'}],
+    23:[{t:'IG',c:'cal-ig'},{t:'LI',c:'cal-li'}],
+    26:[{t:'TW',c:'cal-tw'}],
+    27:[{t:'IG',c:'cal-ig'},{t:'LI',c:'cal-li'}],
+    28:[{t:'TW',c:'cal-tw'}],
+    29:[{t:'YT',c:'cal-yt'},{t:'IG',c:'cal-ig'}],
+    30:[{t:'LI',c:'cal-li'}]
+  };
+  const body = document.getElementById('cal-body');
+  // May 1 2026 = Friday = offset 4 (Mon=0)
+  const offset = 4;
+  const days = 31;
+  let html = '';
+  for (let i = 0; i < offset; i++) html += '<div></div>';
+  for (let d = 1; d <= days; d++) {
+    const today = d === 6;
+    const p = posts[d] || [];
+    html += `<div class="cal-cell" style="${today?'border-color:var(--color-border-info);':''}" onclick="sendPrompt('Generate content ideas for May ${d} social media posts')">
+      <div class="day-num" style="${today?'color:var(--color-text-info);':''}">${d}</div>
+      ${p.map(x=>`<div class="cal-post ${x.c}">${x.t}</div>`).join('')}
+    </div>`;
+  }
+  body.innerHTML = html;
+})();
+</script>
+
+</body>
+</html>
